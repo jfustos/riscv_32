@@ -1,0 +1,69 @@
+
+Allocating common symbols
+Common symbol       size              file
+
+my_val_ram1         0x4               test.o
+my_val_ram2         0x4               test.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+LOAD entry.o
+LOAD test.o
+                0x0000000000000000                . = 0x0
+
+.text           0x0000000000000000      0x603
+ *(.text.init)
+ .text.init     0x0000000000000000        0x8 entry.o
+                0x0000000000000000                reset_vector
+ *(.text)
+ .text          0x0000000000000008        0x0 entry.o
+ .text          0x0000000000000008      0x5fb test.o
+                0x00000000000002fa                start
+
+.rodata         0x0000000000000604       0x70
+ .rodata        0x0000000000000604       0x70 test.o
+                0x0000000000000604                main_menu_list
+                0x0000000000000640                convert_hex
+                0x0000000000000650                main_menu
+                0x000000000000065c                my_values
+
+.rodata.str1.4  0x0000000000000674       0xd0
+ .rodata.str1.4
+                0x0000000000000674       0xd0 test.o
+                                         0xfc (size before relaxing)
+
+.rela.dyn       0x0000000000000744        0x0
+ .rela.text.init
+                0x0000000000000744        0x0 entry.o
+ .rela.text     0x0000000000000744        0x0 entry.o
+ .rela.rodata   0x0000000000000744        0x0 entry.o
+
+.data           0x0000000000000744        0x0
+ .data          0x0000000000000744        0x0 entry.o
+ .data          0x0000000000000744        0x0 test.o
+
+.sdata          0x0000000000000744        0x4
+ .sdata         0x0000000000000744        0x4 test.o
+                0x0000000000000744                my_val_rom
+                0x0000000000002000                . = 0x2000
+                0x0000000000002000                _bss_start = .
+
+.bss            0x0000000000002000        0x8
+ *(.bss)
+ .bss           0x0000000000002000        0x0 entry.o
+ .bss           0x0000000000002000        0x0 test.o
+ *(.bss.*)
+ COMMON         0x0000000000002000        0x8 test.o
+                0x0000000000002000                my_val_ram1
+                0x0000000000002004                my_val_ram2
+                0x0000000000002008                _end = .
+OUTPUT(rv_16_elf elf32-littleriscv)
+
+.comment        0x0000000000000000       0x1a
+ .comment       0x0000000000000000       0x1a test.o
+                                         0x1b (size before relaxing)
