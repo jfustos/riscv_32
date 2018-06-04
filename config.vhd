@@ -10,13 +10,16 @@ use IEEE.NUMERIC_STD.ALL;
 
 package config is
     
-    constant ZERO_8    : STD_LOGIC_VECTOR(  7 downto 0 ) := ( others => '0');
-    constant ONES_8    : STD_LOGIC_VECTOR(  7 downto 0 ) := ( others => '1');
-    constant ZERO_16   : STD_LOGIC_VECTOR( 15 downto 0 ) := ( others => '0');
-    constant ONES_16   : STD_LOGIC_VECTOR( 15 downto 0 ) := ( others => '1');
-    constant ZERO_32   : STD_LOGIC_VECTOR( 31 downto 0 ) := ( others => '0');
-    constant ONES_32   : STD_LOGIC_VECTOR( 31 downto 0 ) := ( others => '1');
-    constant MILLSEC   : STD_LOGIC_VECTOR( 15 downto 0 ) := x"1F40";
+    constant ZERO_8     : STD_LOGIC_VECTOR(  7 downto 0 ) := ( others => '0');
+    constant ONES_8     : STD_LOGIC_VECTOR(  7 downto 0 ) := ( others => '1');
+    constant ZERO_16    : STD_LOGIC_VECTOR( 15 downto 0 ) := ( others => '0');
+    constant ONES_16    : STD_LOGIC_VECTOR( 15 downto 0 ) := ( others => '1');
+    constant ZERO_24    : STD_LOGIC_VECTOR( 23 downto 0 ) := ( others => '0');
+    constant ZERO_32    : STD_LOGIC_VECTOR( 31 downto 0 ) := ( others => '0');
+    constant ONES_32    : STD_LOGIC_VECTOR( 31 downto 0 ) := ( others => '1');
+    constant MILLSEC    : STD_LOGIC_VECTOR( 15 downto 0 ) := x"1F40";
+    constant MILLSEC_30 : STD_LOGIC_VECTOR( 23 downto 0 ) := x"03A980";
+    constant M_SEC_TIMER    : STD_LOGIC_VECTOR( 15 downto 0 ) := x"0320";
     
     constant MEM_BYTES_1   : STD_LOGIC_VECTOR( 1 downto 0 ) := "00";
     constant MEM_BYTES_2   : STD_LOGIC_VECTOR( 1 downto 0 ) := "01";

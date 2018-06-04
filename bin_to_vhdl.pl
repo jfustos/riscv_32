@@ -32,13 +32,32 @@ sub write_vhdl_file
     my $rom_address = shift;
     my $init_offset = shift;
     
-    open my $vhd_fh, '>', $vhdl_file_name
-        or die "Could not open vhdl file |$vhdl_file_name| says |$!|\n\n";
+    open my $vhd_fh_0, '>', "${vhdl_file_name}_0.vhd"
+        or die "Could not open vhdl file |${vhdl_file_name}_0.vhd| says |$!|\n\n";
+    
+    open my $vhd_fh_1, '>', "${vhdl_file_name}_1.vhd"
+        or die "Could not open vhdl file |${vhdl_file_name}_1.vhd| says |$!|\n\n";
+    
+    open my $vhd_fh_2, '>', "${vhdl_file_name}_2.vhd"
+        or die "Could not open vhdl file |${vhdl_file_name}_2.vhd| says |$!|\n\n";
+    
+    open my $vhd_fh_3, '>', "${vhdl_file_name}_3.vhd"
+        or die "Could not open vhdl file |${vhdl_file_name}_3.vhd| says |$!|\n\n";
+    
+    my @vhd_fhs = ($vhd_fh_0, $vhd_fh_1, $vhd_fh_2, $vhd_fh_3);
+    my $fh_select = 0;
     
     foreach my $byte ( @{ $bytes })
     {
-        my $string = sprintf "(%d + %d) => x\"%02x\", ", $rom_address, $init_offset++, ord( $byte );
+        my $string = sprintf "(%d + %d) => x\"%02x\", ", $rom_address, $init_offset, ord( $byte );
+        my $vhd_fh = $vhd_fhs[$fh_select];
         print $vhd_fh $string;
+        $fh_select++;
+        if ( $fh_select == 4 )
+        {
+            $fh_select = 0;
+            $init_offset++;
+        }
     }
 }
 
