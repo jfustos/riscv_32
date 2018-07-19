@@ -1,0 +1,198 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+use File::Path qw(mkpath);
+use Cwd 'abs_path';
+use File::Basename;
+use File::Copy;
+my @main_args = ();
+my @sec_args = ();
+my $logger;
+my $output_file;
+my $log_mode = '>>';
+my $logFile;
+my $stand_log;
+my $extra_path = '/home/jfustos/extra';
+my $seconds = time() % 43200; ## seconds in chunks of 12 hours.
+my $cnt = "_${$}_${seconds}";
+
+foreach my $arg_var ( @ARGV )
+{
+	my $hakell_C_reg = '\A(.*)\.([^\/ ]*)(c|s)\Z';
+	if(   ( $arg_var =~ /$hakell_C_reg/i )  &&  ( -e $arg_var ) )
+	{
+		my $c_file_abs = abs_path( $arg_var );
+		if( ( $c_file_abs =~ /\/tmp\// ) && ( $c_file_abs =~ /$hakell_C_reg/i ) )
+		{
+			## do not copy and redirect .hs files. Those are haskell source.
+			if( (defined $2) && ($2 eq 'h') && ($3 eq 's')){ next; }
+			
+			my $new_c_file = $extra_path . $1 . $cnt . '.' . $3;
+			
+			### make the directory for the new C file if it doesn't exist.
+			my $dir = dirname( $new_c_file );
+			die "could not get the path name of '$new_c_file'!!\n\n" unless defined $dir;
+			unless( -e $dir)
+			{
+				mkpath( $dir );
+			}
+			die "could not create path '$dir'!!" unless ( -e $dir );
+			
+			### copy c file to new spot and have gcc use the new spot.
+			copy( $arg_var, $new_c_file ) or die "Could not copy $arg_var to $new_c_file: $!";
+			$arg_var = $new_c_file;
+		}
+	}
+}
+
+my @args_cpy = @ARGV;
+
+my $counter = -1;
+my $special = '-E';
+my $found_special = 0;
+my $found_out = 0;
+my $found_c = 0;
+my $c_file;
+my $found_dash = 0;;
+foreach my $arg_var ( @args_cpy )
+{
+	$counter++;
+	if($arg_var eq '-E' || $arg_var eq '-c' || $arg_var eq '-S')
+	{
+		$found_special = 1;
+		splice @args_cpy, $counter, 1, $special, '-C', '-dMD';
+		next;
+	}
+	
+	if($arg_var =~ /\A-o(.*)\Z/)
+	{
+		if(defined $1 && $1 ne '' && $1 ne "")
+		{
+			$output_file = $extra_path . abs_path($1) . $cnt;
+			$arg_var = '-o' . $output_file . '.i';
+		}
+		else
+		{
+			$output_file = $extra_path . abs_path( $args_cpy[$counter + 1] ) . $cnt unless ($counter == $#args_cpy);
+			$args_cpy[$counter + 1] = $output_file . '.i';
+		}
+		
+		$logFile = "$output_file.env";
+		$log_mode = '>';
+		$found_out = 1;
+	}
+	
+	if($arg_var =~ /\A.*\.c\Z/)
+	{
+		$found_c++;
+		$c_file = $extra_path . abs_path( $arg_var ) . $cnt;
+	}
+	
+	if($arg_var =~ /\A\s*-\s*\Z/)
+	{
+		$found_dash = 1;
+	}
+}
+
+unshift @args_cpy, '-dMD' unless ($found_special == 1);
+unshift @args_cpy, '-C' unless ($found_special == 1);
+unshift @args_cpy, $special unless ($found_special == 1);
+if($found_out == 0 && $found_c == 1)
+{
+	$logFile = "$c_file.env";
+	$log_mode = '>';
+	push @args_cpy, '-o';
+	push @args_cpy, "$c_file.i";
+}
+
+
+$logFile = "/home/jfustos/bak/notes/my_gcc.log" unless defined $logFile;
+my $dir = dirname($logFile);
+die "could not get the path name of '$logFile'!!\n\n" unless defined $dir;
+unless( -e $dir)
+{
+	mkpath( $dir );
+}
+die "could not create path '$dir'!!" unless ( -e $dir );
+
+open $logger, $log_mode, $logFile or die "could not open log file: |$logFile|\n\n";
+open $stand_log, '>>', "/home/jfustos/bak/notes/my_gcc.log" or die "could not open standard log file: ${!}!!\n\n";
+my $fh = select($logger);
+$| = 1;
+select($stand_log);
+$| = 1;
+select($fh);
+
+
+print $logger "${$} :: ${0}\n";
+print $stand_log "${$} :: ${0}\n";
+print $logger "\tARG list - origional\n";
+$counter = 1;
+foreach my $arg_var ( @ARGV )
+{
+	my $tak_on = ' ---removed---';
+	##unless($arg_var eq '-O2')
+	##{
+		$tak_on = '';
+		push @main_args, $arg_var;
+	##}
+	print $logger "\t\t|${counter}\t| = ${arg_var}${tak_on}\n";
+	$counter++;
+}
+
+print $logger "\n\n\tARG list - modified\n";
+$counter = 1;
+foreach my $arg_var ( @args_cpy )
+{
+	my $tak_on = ' ---removed---';
+	##unless($arg_var eq '-O2')
+	##{
+		$tak_on = '';
+		push @sec_args, $arg_var;
+	##}
+	print $logger "\t\t|${counter}\t| = ${arg_var}${tak_on}\n";
+	$counter++;
+}
+
+print $logger "\tENV list\n";
+foreach my $env_var ( keys %ENV )
+{
+	print $logger "\t\t|${env_var}| = |$ENV{$env_var}|\n";
+}
+
+if( ($found_out == 1 || $found_c == 1)   && $found_dash == 0)
+{
+	print $logger "\n\n\trunning command:$cnt: /usr/bin/gcc_new @sec_args\n\n";
+	print $stand_log "\n\n\trunning command:$cnt: /usr/bin/gcc_new @sec_args\n\n";
+	
+	open my $oSTDOUT, '>&', STDOUT or die "could not redirect STDOUT to log file: |$logFile|\n\n";
+	open my $oSTDERR, '>&', STDERR or die "could not redirect STDOUT to log file: |$logFile|\n\n";
+	open STDOUT, '>&', $logger or die "could not redirect STDOUT to log file: |$logFile|\n\n";
+	open STDERR, '>&', $logger or die "could not redirect STDERR to log file: |$logFile|\n\n";
+	
+	my $return_code = system "/usr/bin/gcc_new", @sec_args;
+	$return_code = $return_code/256;
+	
+	print $logger "\t\treturn code is: |$return_code|\n";
+	print $stand_log "\t\treturn code is: |$return_code|\n";
+	
+	open STDOUT, '>&', $oSTDOUT or die "could not redirect STDOUT to log file: |$logFile|\n\n";
+	open STDERR, '>&', $oSTDERR or die "could not redirect STDOUT to log file: |$logFile|\n\n";
+}
+else { print $logger "\n\n\tNever found a -o style argument, a .c file, found '-', or there was more than 1 .c file.\n"; }
+
+##push @main_args, "-masm=intel";
+
+print $logger "\n\n\trunning command:$cnt: /usr/bin/gcc_new @main_args\n\n";
+print $stand_log "\n\n\trunning command:$cnt: /usr/bin/gcc_new @main_args\n\n";
+
+print $logger "\n\n\n";
+
+my $return_code = system "/usr/bin/gcc_new", @main_args;
+$return_code = $return_code/256;
+
+print $logger "\t\treturn code is:$cnt: |$return_code|\n";
+print $stand_log "\t\treturn code is:$cnt: |$return_code|\n";
+
+exit($return_code);

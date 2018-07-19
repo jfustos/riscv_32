@@ -1,0 +1,102 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+use File::Path qw(mkpath);
+use Cwd 'abs_path';
+use File::Basename;
+my @args_cpy = @ARGV;
+my @main_args = ();
+my @sec_args = ();
+my $output_file = '';
+my $map_file = '';
+my $logFile;
+my $stand_log;
+
+my $counter = -1;
+my $logger;
+my $log_mode = '>>';
+
+my $time = time();
+my $prog = $0;
+my $extra_path = '/home/jfustos/extra';
+my $seconds = time() % 43200; ## seconds in chunks of 12 hours.
+my $cnt = "_${$}_${seconds}";
+my $pid = $cnt;
+my $cwd = abs_path();
+
+foreach my $arg_var ( @ARGV )
+{
+	$counter++;
+	if($arg_var =~ /\A-o(.*)\Z/)
+        {
+                if(defined $1 && $1 ne '' && $1 ne "")
+                {
+                        $output_file = $extra_path . abs_path($1) . $pid . '.map';
+                }
+                else
+                {
+                        $output_file = $extra_path . abs_path( $ARGV[$counter + 1] ) . $pid . '.map';
+                }
+	}		
+	
+	if($arg_var =~ /\A-Map(.*)\Z/)
+	{
+		if( defined $1 && $1 ne '' && $1 ne "" )
+		{
+			my $temp_map = $1;
+			if ( $temp_map =~ /\A=(.+)\Z/ )
+			{
+				$map_file = $1;
+			}
+		}
+		else
+		{
+			$map_file = $ARGV[$counter + 1];
+		}
+	}
+}
+
+if(  ( $output_file ne '' ) && ( $map_file eq '' )  )
+{
+	push @ARGV, "--print-map";
+	push @ARGV, "-Map=${output_file}";
+}
+
+if( $output_file ne '' )
+{
+	my $dir = dirname($output_file);
+	die "could not get the path name of '$output_file'!!\n\n" unless defined $dir;
+	unless( -e $dir)
+	{
+	        mkpath( $dir );
+	}
+	die "could not create path '$dir'!!" unless ( -e $dir );
+}
+
+$logFile = "${extra_path}/link/${time}_${pid}";
+
+open $logger, $log_mode, $logFile or die "could not open log file: |$logFile|\n\n";
+
+my $fh = select($logger);
+$| = 1;
+select($fh);
+
+my $new_prog = "/usr/bin/ld.bfd_new";
+
+print $logger "cwd = |${cwd}|\n";
+print $logger "${new_prog} @ARGV\n";
+
+my $return_code = system $new_prog, @ARGV;
+$return_code = $return_code/256;
+
+print $logger "\t\treturn code is: |$return_code|\n\n";
+
+if(  ( $return_code == 0 ) && ( $map_file ne '' ) && ( $output_file ne '' ) )
+{
+	print $logger "cp $map_file $output_file\n";
+	my $copy_code = system "cp $map_file $output_file\n";
+	print $logger "\t\treturn code for copy: |$copy_code|\n\n";
+}
+
+exit($return_code);
